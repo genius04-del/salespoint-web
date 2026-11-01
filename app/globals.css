@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/*
+ * Brand tokens straight from the SalesPoint spec (section 30). Tailwind v4
+ * reads custom colors from this @theme block and generates utility classes
+ * automatically — e.g. --color-brand-orange below becomes bg-brand-orange,
+ * text-brand-orange, border-brand-orange, etc. No tailwind.config.ts needed.
+ */
+@theme {
+  --color-primary-navy: #071a2f;
+  --color-dark-navy: #04111f;
+  --color-brand-orange: #ff6b00;
+  --color-light-orange: #ff8a33;
+  --color-app-background: #f5f7fa;
+  --color-success: #16a34a;
+  --color-preparing: #2563eb;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  --background: #f5f7fa;
+  --foreground: #071a2f;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
