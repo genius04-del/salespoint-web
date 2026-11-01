@@ -75,14 +75,29 @@ export default function TillLoginPage() {
     setPin((p) => (p.length >= 6 ? p : p + key));
   }
 
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (/^\d$/.test(e.key)) press(e.key as (typeof KEYS)[number]);
-    else if (e.key === "Backspace") press("back");
-    else if (e.key === "Enter") void signIn(pin);
-  }
+  // The physical keyboard drives the PIN too. Listening on the window (not a
+  // div) means it works without clicking anywhere first, but typing in the
+  // till code / staff number boxes is left alone.
+  // No deps array: re-binds each render so it always sees the latest state.
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typingInField = t?.tagName === "INPUT" || t?.tagName === "TEXTAREA";
+      if (e.key === "Enter") {
+        if (!typingInField || pin.length >= 4) void signIn(pin);
+        return;
+      }
+      if (typingInField) return;
+      if (/^\d$/.test(e.key)) press(e.key as (typeof KEYS)[number]);
+      else if (e.key === "Backspace") press("back");
+      else if (e.key === "Escape") press("clear");
+    };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app-background px-4 py-8" onKeyDown={onKeyDown}>
+    <div className="flex min-h-screen items-center justify-center bg-app-background px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-orange text-white shadow-sm shadow-brand-orange/30">
@@ -120,7 +135,7 @@ export default function TillLoginPage() {
           </div>
 
           <div className="flex justify-center gap-3 py-2" aria-label={`${pin.length} digits entered`}>
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: Math.max(4, pin.length) }).map((_, i) => (
               <span key={i} className={`h-3.5 w-3.5 rounded-full ${i < pin.length ? "bg-primary-navy" : "bg-gray-200"}`} />
             ))}
           </div>
