@@ -6,7 +6,6 @@ import { Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useComingSoon } from "@/components/ComingSoonProvider";
 import { NAV_ITEMS } from "@/lib/navItems";
-import { useRestaurantMode } from "@/lib/useRestaurantMode";
 
 /**
  * Shared between the fixed desktop sidebar and the mobile slide-in drawer
@@ -18,13 +17,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const showComingSoon = useComingSoon();
   const pathname = usePathname();
 
- const restaurantMode = useRestaurantMode();
-
   const visibleItems = NAV_ITEMS.filter(
-    (item) =>
-      (item.permission === null || hasPermission(item.permission)) &&
-      (!item.restaurantOnly || restaurantMode === true)
+    (item) => item.permission === null || hasPermission(item.permission)
   );
+
   return (
     <div className="flex h-full flex-col bg-primary-navy text-white">
       <div className="flex items-center gap-2 px-5 py-5">
@@ -68,7 +64,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="border-t border-white/10 px-5 py-4 text-center text-[11px] text-white/40">
         <p>SalesPoint by</p>
-        <p className="font-medium text-white/60">GoDigital Technologies</p>
+        <p className="font-medium text-white/60">LoneWolf Digital Technology Solutions</p>
       </div>
     </div>
   );

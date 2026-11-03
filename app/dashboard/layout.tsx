@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <main className="mx-auto w-full max-w-5xl flex-1 p-4 sm:p-6">{children}</main>
 
           <footer className="border-t border-black/5 px-4 py-3 text-center text-xs text-gray-400 sm:px-6">
-            SalesPoint by GoDigital Technologies
+            SalesPoint by LoneWolf Digital Technology Solutions
           </footer>
         </div>
       </div>
