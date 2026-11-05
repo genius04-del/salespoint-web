@@ -12,6 +12,8 @@ export interface Ingredient {
   name: string;
   unit: string;
   isPrepared: boolean;
+  category: string | null;
+  batchYield: string | null;
   currentQuantity: string;
   minStockLevel: string;
   costPerUnit: string;
@@ -48,8 +50,10 @@ export interface ProductionPreviewLine {
 export interface ProductionBatch {
   id: string;
   outputId: string;
+  number: number;
   quantityProduced: string;
   totalCost: string;
+  reason: string | null;
   notes: string | null;
   createdAt: string;
   producedByName: string | null;
@@ -86,6 +90,7 @@ export interface StockCountLine {
   itemType: "PRODUCT" | "INGREDIENT";
   itemName: string;
   unit: string;
+  category: string | null;
   expected: string;
   counted: string | null;
   variance: string | null;
@@ -121,4 +126,27 @@ export interface VarianceReport {
   items: VarianceItem[];
   waste: { ingredientId: string; name: string; unit: string; quantity: number; value: number }[];
   production: { ingredientId: string; name: string; unit: string; used: number; standard: number; overUse: number; value: number }[];
+}
+
+export interface MovementReportRow {
+  itemType: "PRODUCT" | "INGREDIENT";
+  itemId: string;
+  name: string;
+  unit: string;
+  category: string | null;
+  opening: number;
+  stockIn: number;
+  stockOut: number;
+  waste: number;
+  theoreticalClosing: number;
+  actualClosing: number | null;
+  variance: number | null;
+  varianceValue: number | null;
+  counted: boolean;
+}
+
+export interface MovementReport {
+  range: { from: string; to: string; label: string };
+  rows: MovementReportRow[];
+  totals: { shortageValue: number; surplusValue: number; itemsCounted: number; itemsShort: number };
 }

@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
 import type { Ingredient } from "@/lib/stockTypes";
 import {
   createIngredient,
   receiveIngredient,
-  setPrepMakeup,
   wasteIngredient,
   type PaidWith,
 } from "@/lib/api/kitchenStock";
@@ -14,11 +12,13 @@ import { Field, Modal, ghostBtn, inputClass, primaryBtn } from "./Modal";
 import { errMsg, num, qty } from "./format";
 
 const UNITS = ["kg", "g", "litre", "ml", "piece", "pack", "tin", "crate"];
+const CATEGORIES = ["Vegetables", "Meat", "Dry goods", "Dairy", "Sauces", "Drinks", "Packaging"];
 
 export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("kg");
   const [isPrepared, setIsPrepared] = useState(false);
+  const [category, setCategory] = useState("");
   const [opening, setOpening] = useState("");
   const [cost, setCost] = useState("");
   const [min, setMin] = useState("");
@@ -34,7 +34,7 @@ export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; o
     if ([costN, openN, minN].some((n) => !Number.isFinite(n) || n < 0)) return setError("Numbers can't be negative or text.");
     setBusy(true);
     try {
-      await createIngredient({ name: name.trim(), unit, isPrepared, minStockLevel: minN, costPerUnit: costN, openingQuantity: openN });
+      await createIngredient({ name: name.trim(), unit, isPrepared, category: category.trim() || undefined, minStockLevel: minN, costPerUnit: costN, openingQuantity: openN });
       onDone();
     } catch (err) {
       setError(errMsg(err, "Could not save"));
@@ -61,10 +61,18 @@ export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; o
             <input className={inputClass} inputMode="decimal" value={min} onChange={(e) => setMin(e.target.value)} placeholder="0" />
           </Field>
         </div>
+        <Field label="Group (optional)" hint="Groups the daily stock count. Use Packaging for boxes, carrier bags and tissues.">
+          <input className={inputClass} list="ingredient-groups" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Vegetables" />
+          <datalist id="ingredient-groups">
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </Field>
         <label className="flex items-start gap-2 text-sm text-[#071A2F]">
           <input type="checkbox" className="mt-1" checked={isPrepared} onChange={(e) => setIsPrepared(e.target.checked)} />
           <span>
-            <b>Made in the kitchen</b> (dough, sauce, chopped vegetables). You will record it in the Stock Journal, using up other ingredients.
+            <b>Made in the kitchen</b> (dough, sauce, jollof). Better to add these from the Recipes page, where you also say what goes into them.
           </span>
         </label>
         {!isPrepared && (
@@ -182,91 +190,6 @@ export function WasteModal({ ingredient, onClose, onDone }: { ingredient: Ingred
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onClose} className={ghostBtn}>Cancel</button>
           <button disabled={busy} className={primaryBtn}>{busy ? "Saving…" : "Write off"}</button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-interface Row { ingredientId: string; quantity: string }
-
-// What ONE unit of a prepared item is made from, e.g. 1 Dough ball - Medium = 0.15 kg flour + …
-export function MakeupModal({
-  ingredient,
-  all,
-  onClose,
-  onDone,
-}: {
-  ingredient: Ingredient;
-  all: Ingredient[];
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [rows, setRows] = useState<Row[]>(
-    ingredient.components.length
-      ? ingredient.components.map((c) => ({ ingredientId: c.componentId, quantity: String(Number(c.quantity)) }))
-      : [{ ingredientId: "", quantity: "" }]
-  );
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const options = all.filter((i) => i.id !== ingredient.id && i.isActive);
-  const unitOf = (id: string) => all.find((i) => i.id === id)?.unit ?? "";
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    const filled = rows.filter((r) => r.ingredientId);
-    const parsed = filled.map((r) => ({ ingredientId: r.ingredientId, quantity: num(r.quantity) }));
-    if (parsed.some((r) => !(r.quantity > 0))) return setError("Every ingredient needs a quantity above zero.");
-    setBusy(true);
-    try {
-      await setPrepMakeup(ingredient.id, parsed);
-      onDone();
-    } catch (err) {
-      setError(errMsg(err, "Could not save"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal title={`What is 1 ${ingredient.unit} of ${ingredient.name} made from?`} onClose={onClose} wide>
-      <form onSubmit={submit} className="space-y-3">
-        <p className="text-sm text-gray-500">
-          This is the standard recipe. In the Stock Journal, the system works out the total from how many you make, and flags it when the kitchen uses more.
-        </p>
-        {rows.map((r, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <select
-              className={inputClass}
-              value={r.ingredientId}
-              onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, ingredientId: e.target.value } : x)))}
-            >
-              <option value="">Choose ingredient…</option>
-              {options.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </select>
-            <input
-              className={`${inputClass} w-28`}
-              inputMode="decimal"
-              placeholder="Qty"
-              value={r.quantity}
-              onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))}
-            />
-            <span className="w-12 text-xs text-gray-500">{unitOf(r.ingredientId)}</span>
-            <button type="button" aria-label="Remove" onClick={() => setRows(rows.filter((_, j) => j !== i))} className="rounded p-1 text-gray-400 hover:text-red-600">
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
-        <button type="button" onClick={() => setRows([...rows, { ingredientId: "", quantity: "" }])} className="flex items-center gap-1 text-sm font-medium text-[#FF6B00]">
-          <Plus size={14} /> Add ingredient
-        </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className={ghostBtn}>Cancel</button>
-          <button disabled={busy} className={primaryBtn}>{busy ? "Saving…" : "Save make-up"}</button>
         </div>
       </form>
     </Modal>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ArrowLeft, Eye, EyeOff, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -131,6 +131,10 @@ export function CountSheet({ id, onBack }: { id: string; onBack: () => void }) {
   const shown = draft ? lines : lines.filter((l) => l.counted !== null);
   const net = countedLines.reduce((s, l) => s + Number(l.varianceValue ?? 0), 0);
   const columns = !draft || showExpected;
+  // Grouped (Vegetables, Meat, Packaging...) so the counter walks the shelves in order.
+  const ordered = [...shown].sort(
+    (a, b) => (a.category ?? "~").localeCompare(b.category ?? "~") || a.itemName.localeCompare(b.itemName)
+  );
 
   return (
     <div className="space-y-4">
@@ -185,11 +189,18 @@ export function CountSheet({ id, onBack }: { id: string; onBack: () => void }) {
             </tr>
           </thead>
           <tbody>
-            {shown.map((l) => {
+            {ordered.map((l, idx) => {
               const draftNum = num(values[l.id] ?? "");
               const diff = draft ? (Number.isFinite(draftNum) ? draftNum - Number(l.expected) : null) : l.variance === null ? null : Number(l.variance);
+              const newGroup = idx === 0 || ordered[idx - 1].category !== l.category;
               return (
-                <tr key={l.id} className="border-b border-gray-50 last:border-0">
+                <Fragment key={l.id}>
+                {newGroup && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={columns ? 4 : 2} className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">{l.category ?? "Other"}</td>
+                  </tr>
+                )}
+                <tr className="border-b border-gray-50 last:border-0">
                   <td className="px-4 py-2 text-[#071A2F]">
                     {l.itemName}
                     <span className="ml-1 text-xs text-gray-400">{l.unit}</span>
@@ -216,6 +227,7 @@ export function CountSheet({ id, onBack }: { id: string; onBack: () => void }) {
                     </td>
                   )}
                 </tr>
+                </Fragment>
               );
             })}
           </tbody>

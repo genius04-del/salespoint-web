@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/apiClient";
 import { closeDay } from "@/lib/api/days";
 import { METHOD_LABELS } from "@/lib/dayTypes";
 import type { CloseDayResponse, CountedMethod, ExpectedRow } from "@/lib/dayTypes";
+import { DenominationCounter, denomAny, denomTotal, toDenominations, type DenomEntry } from "./DenominationCounter";
 import { money, signedMoney, varianceLabel, varianceTone } from "./format";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -25,7 +26,15 @@ export function CashUpForm({
   onNeedsRefresh: () => void; // figures moved while counting
   onClosed: (result: CloseDayResponse) => void;
 }) {
-  const [counted, setCounted] = useState<Record<string, string>>({});
+  const [typed, setCounted] = useState<Record<string, string>>({});
+  const [denoms, setDenoms] = useState<DenomEntry>({});
+  const [counting, setCounting] = useState(false);
+  const cashByNotes = counting && denomAny(denoms);
+  // Cash comes from the notes and coins when they are being counted.
+  const counted = useMemo<Record<string, string>>(
+    () => (cashByNotes ? { ...typed, CASH: String(denomTotal(denoms)) } : typed),
+    [cashByNotes, typed, denoms]
+  );
   const [notes, setNotes] = useState("");
   const [accept, setAccept] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -65,6 +74,7 @@ export function CashUpForm({
           .map((l) => ({ method: l.method as CountedMethod, counted: l.value as number })),
         notes: notes.trim() || undefined,
         acceptVariance: hasDifference && accept,
+        denominations: cashByNotes ? toDenominations(denoms) : undefined,
       });
       onClosed(result);
     } catch (e) {
@@ -118,6 +128,11 @@ export function CashUpForm({
                       float {money(l.openingFloat)} + sales {money(l.sales)} − paid out {money(l.paidOut)}
                     </p>
                   )}
+                  {l.method === "CASH" && (
+                    <button type="button" onClick={() => setCounting((c) => !c)} className="mt-1 text-xs font-medium text-[#FF6B00] hover:underline">
+                      {counting ? "Hide the notes and coins" : "Count notes and coins"}
+                    </button>
+                  )}
                   {l.method !== "CASH" && (l.sales > 0 || l.paidOut > 0) && (
                     <p className="text-xs text-gray-400">
                       sales {money(l.sales)}
@@ -134,6 +149,7 @@ export function CashUpForm({
                     step="0.01"
                     inputMode="decimal"
                     value={counted[l.method] ?? ""}
+                    readOnly={l.method === "CASH" && cashByNotes}
                     onChange={(e) => setCounted((c) => ({ ...c, [l.method]: e.target.value }))}
                     placeholder="0.00"
                     aria-label={`${METHOD_LABELS[l.method]} counted`}
@@ -150,6 +166,9 @@ export function CashUpForm({
                 </td>
               </tr>
             ))}
+            {counting && (
+              <tr><td colSpan={4} className="pb-3"><DenominationCounter value={denoms} onChange={setDenoms} /></td></tr>
+            )}
             <tr>
               <td className="py-3 pr-3">
                 <p className="font-medium text-[#071A2F]">{METHOD_LABELS.PAYSTACK}</p>

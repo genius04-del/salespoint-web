@@ -1,197 +1,193 @@
- "use client";
+"use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, ShoppingBag } from "lucide-react";
-import { createTable, listOrders, listTables, updateTable } from "@/lib/api/restaurant";
-import { TableOrderModal } from "@/components/TableOrderModal";
+import { Plus, RefreshCw, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { PERMISSIONS } from "@/lib/permissions";
-import { useRestaurantMode } from "@/lib/useRestaurantMode";
-import type { RestaurantOrder, RestaurantTable } from "@/lib/types";
+import { getBusiness } from "@/lib/api/business";
+import { createTable, listOrders, listTables, setTableStatus } from "@/lib/api/restaurant";
+import type { Business } from "@/lib/types";
+import type { DiningTable, Order, TableStatus } from "@/lib/restaurantTypes";
+import { orderTotal } from "@/lib/restaurantTypes";
+import { TabPanel } from "@/components/restaurant/TabPanel";
+import { Field, Modal, ghostBtn, inputClass, primaryBtn } from "@/components/kitchen/Modal";
+import { errMsg } from "@/components/kitchen/format";
 
-const STATUS_STYLE: Record<string, string> = {
-  AVAILABLE: "border-green-200 bg-green-50 text-green-700",
-  OCCUPIED: "border-[#FF6B00]/40 bg-orange-50 text-[#FF6B00]",
-  RESERVED: "border-blue-200 bg-blue-50 text-blue-700",
-  NEEDS_CLEANING: "border-amber-200 bg-amber-50 text-amber-700",
+const STATUS: Record<TableStatus, { label: string; cls: string }> = {
+  AVAILABLE: { label: "Free", cls: "bg-green-50 text-green-700 ring-green-200" },
+  OCCUPIED: { label: "Open tab", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
+  RESERVED: { label: "Reserved", cls: "bg-blue-50 text-blue-700 ring-blue-200" },
+  NEEDS_CLEANING: { label: "Needs cleaning", cls: "bg-gray-100 text-gray-600 ring-gray-200" },
 };
 
-type Open = { tableId: string | null; title: string; orderId: string | null } | null;
+const mins = (iso: string) => Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+
+// What is open on screen: a table (maybe with a tab) or a takeaway order.
+type Selection = { kind: "table"; tableId: string } | { kind: "takeaway"; orderId: string | null } | null;
 
 export default function TablesPage() {
   const { hasPermission } = useAuth();
-  const restaurantMode = useRestaurantMode();
-  const canManage = hasPermission(PERMISSIONS.tablesManage);
+  const canManage = hasPermission("tables.manage");
+  const canServe = hasPermission("sales.create");
 
-  const [tables, setTables] = useState<RestaurantTable[]>([]);
-  const [orders, setOrders] = useState<RestaurantOrder[]>([]);
+  const [tables, setTables] = useState<DiningTable[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [open, setOpen] = useState<Open>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [newName, setNewName] = useState("");
-  const [newCap, setNewCap] = useState("");
+  const [selection, setSelection] = useState<Selection>(null);
+  const [adding, setAdding] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [t, o] = await Promise.all([listTables(), listOrders("OPEN")]);
+      setTables(t.tables);
+      setOrders(o.orders);
+      setError("");
+    } catch (e) {
+      setError(errMsg(e, "Could not load the tables"));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (restaurantMode !== true) return;
-    let cancelled = false;
     (async () => {
+      await load();
       try {
-        const [t, o] = await Promise.all([listTables(), listOrders({ status: "OPEN" })]);
-        if (cancelled) return;
-        setTables(t.tables);
-        setOrders(o.orders);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load tables");
+        setBusiness((await getBusiness()).business);
+      } catch {
+        // The receipt just shows no business header.
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey, restaurantMode]);
+    const timer = setInterval(() => { if (document.visibilityState === "visible") void load(); }, 15000);
+    return () => clearInterval(timer);
+  }, [load]);
 
-  const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
+  const orderFor = (tableId: string) => orders.find((o) => o.tableId === tableId) ?? null;
+  const takeaways = orders.filter((o) => !o.tableId);
 
-  async function addTable(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
+  const selTable = selection?.kind === "table" ? tables.find((t) => t.id === selection.tableId) ?? null : null;
+  const selOrder =
+    selection?.kind === "table" ? orderFor(selection.tableId) : selection?.kind === "takeaway" && selection.orderId ? orders.find((o) => o.id === selection.orderId) ?? null : null;
+
+  async function clean(t: DiningTable) {
     try {
-      await createTable({
-        name: newName.trim(),
-        capacity: newCap ? Number(newCap) : undefined,
-      });
-      setNewName("");
-      setNewCap("");
-      refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add table");
+      await setTableStatus(t.id, "AVAILABLE");
+      await load();
+    } catch (e) {
+      setError(errMsg(e, "Could not update the table"));
     }
   }
-
-  async function markAvailable(id: string) {
-    try {
-      await updateTable(id, { status: "AVAILABLE" });
-      refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
-    }
-  }
-
-  if (restaurantMode === false) {
-    return (
-      <p className="rounded-xl bg-white p-6 text-sm text-gray-600 shadow-sm">
-        Restaurant mode is off. The owner can turn it on under <b>Restaurant Mode</b>.
-      </p>
-    );
-  }
-
-  const takeaway = orders.filter((o) => !o.tableId);
-  const orderForTable = (id: string) => orders.find((o) => o.tableId === id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-[#071A2F]">Tables</h1>
-        <button
-          onClick={() => setOpen({ tableId: null, title: "Takeaway order", orderId: null })}
-          className="flex items-center gap-2 rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white"
-        >
-          <ShoppingBag size={16} /> New takeaway
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-[#071A2F]">Tables</h1>
+          <p className="text-sm text-gray-500">Tap a table to start an order or see its tab. Orders go straight to the kitchen.</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => void load()} className={`${ghostBtn} flex items-center gap-1`}><RefreshCw size={14} /> Refresh</button>
+          {canServe && <button onClick={() => setSelection({ kind: "takeaway", orderId: null })} className={`${ghostBtn} flex items-center gap-1`}><ShoppingBag size={14} /> Takeaway</button>}
+          {canManage && <button onClick={() => setAdding(true)} className={`${primaryBtn} flex items-center gap-1`}><Plus size={14} /> Add table</button>}
+        </div>
       </div>
 
       {error && <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+      {loading && <p className="text-gray-500">Loading…</p>}
+      {!loading && !error && tables.length === 0 && takeaways.length === 0 && (
+        <p className="rounded-2xl bg-white p-6 text-sm text-gray-500 shadow-sm ring-1 ring-black/5">
+          No tables yet. {canManage ? "Tap Add table to create your first one." : "Ask a manager to add the tables."}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {tables.map((t) => {
-          const order = orderForTable(t.id);
+          const order = orderFor(t.id);
+          const st = STATUS[order ? "OCCUPIED" : t.status];
           return (
-            <div key={t.id} className={`rounded-2xl border p-4 ${STATUS_STYLE[t.status]}`}>
- <button
-                className="w-full text-left"
-                onClick={() =>
-                  setOpen({ tableId: t.id, title: `Table ${t.name}`, orderId: order?.id ?? null })
-                }
+            <div key={t.id} className={`rounded-2xl p-3 ring-1 ${st.cls}`}>
+              <button
+                onClick={() => (t.status === "NEEDS_CLEANING" && !order ? undefined : setSelection({ kind: "table", tableId: t.id }))}
+                className="block w-full text-left"
               >
-                <p className="text-lg font-bold">{t.name}</p>
-                <p className="text-xs">
-                  {t.status.replace(/_/g, " ").toLowerCase()}
-                  {t.capacity ? ` · seats ${t.capacity}` : ""}
-                </p>
-                {order && <p className="mt-1 text-xs font-medium">{order.items.length} items on tab</p>}
+                <p className="text-lg font-bold text-[#071A2F]">{t.name}</p>
+                <p className="text-xs">{st.label}{t.capacity ? ` · seats ${t.capacity}` : ""}</p>
+                {order && (
+                  <p className="mt-2 text-sm font-semibold text-[#071A2F]">
+                    GH₵ {orderTotal(order).toFixed(2)}
+                    <span className="block text-xs font-normal text-gray-500">{order.items.filter((i) => i.kitchenStatus !== "CANCELLED").length} items · {mins(order.createdAt)} min</span>
+                  </p>
+                )}
               </button>
-              {t.status === "NEEDS_CLEANING" && canManage && (
-                <button
-                  onClick={() => markAvailable(t.id)}
-                  className="mt-2 w-full rounded-lg bg-white px-2 py-1 text-xs font-medium text-amber-700"
-                >
-                  Mark available
-                </button>
+              {!order && t.status === "NEEDS_CLEANING" && (
+                <button onClick={() => void clean(t)} className="mt-2 rounded-lg bg-white px-3 py-1 text-xs font-semibold text-[#071A2F] ring-1 ring-gray-200">Mark clean</button>
               )}
             </div>
           );
         })}
-        {tables.length === 0 && (
-          <p className="col-span-full text-sm text-gray-500">
-            No tables yet.{canManage ? " Add one below." : " Ask a manager to add tables."}
-          </p>
-        )}
+        {takeaways.map((o, i) => (
+          <button key={o.id} onClick={() => setSelection({ kind: "takeaway", orderId: o.id })} className="rounded-2xl bg-amber-50 p-3 text-left text-amber-700 ring-1 ring-amber-200">
+            <p className="text-lg font-bold text-[#071A2F]">Takeaway {i + 1}</p>
+            <p className="text-xs">Open tab</p>
+            <p className="mt-2 text-sm font-semibold text-[#071A2F]">GH₵ {orderTotal(o).toFixed(2)}<span className="block text-xs font-normal text-gray-500">{mins(o.createdAt)} min</span></p>
+          </button>
+        ))}
       </div>
 
-      {takeaway.length > 0 && (
-        <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-          <h2 className="mb-3 font-semibold text-[#071A2F]">Open takeaway orders</h2>
-          <div className="flex flex-wrap gap-2">
-            {takeaway.map((o) => (
-              <button
-                key={o.id}
-                onClick={() => setOpen({ tableId: null, title: "Takeaway order", orderId: o.id })}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm hover:border-[#FF6B00]"
-              >
-                {o.items.length} items · {new Date(o.createdAt).toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {canManage && (
-        <form onSubmit={addTable} className="flex flex-wrap items-end gap-2 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-          <div>
-            <label className="mb-1 block text-xs text-gray-500">New table name</label>
-            <input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-              placeholder="e.g. T1 or Patio 2"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-500">Seats</label>
-            <input
-              value={newCap}
-              onChange={(e) => setNewCap(e.target.value)}
-              type="number"
-              min="1"
-              className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            />
-          </div>
-          <button className="flex items-center gap-1 rounded-lg bg-[#071A2F] px-4 py-2 text-sm font-semibold text-white">
-            <Plus size={16} /> Add table
-          </button>
-        </form>
-      )}
-
-      {open && (
-        <TableOrderModal
-          key={`${open.tableId}-${open.orderId}`}
-          tableId={open.tableId}
-          title={open.title}
-          orderId={open.orderId}
-          onClose={() => setOpen(null)}
-          onChanged={refresh}
+      {selection && (selection.kind === "takeaway" || selTable) && (
+        <TabPanel
+          key={selOrder?.id ?? `new-${selection.kind === "table" ? selection.tableId : "takeaway"}`}
+          table={selTable}
+          order={selOrder}
+          business={business}
+          canCancel={hasPermission("sales.cancel")}
+          canKitchen={hasPermission("kitchen.manage")}
+          onClose={() => setSelection(null)}
+          onChanged={async (newOrderId) => {
+            await load();
+            if (newOrderId && selection.kind === "takeaway") setSelection({ kind: "takeaway", orderId: newOrderId });
+          }}
         />
       )}
+      {adding && <AddTableModal onClose={() => setAdding(false)} onDone={() => { setAdding(false); void load(); }} />}
     </div>
+  );
+}
+
+function AddTableModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [name, setName] = useState("");
+  const [seats, setSeats] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    const cap = seats.trim() === "" ? undefined : Number(seats);
+    if (cap !== undefined && (!Number.isInteger(cap) || cap < 1)) return setError("Seats must be a whole number.");
+    setBusy(true);
+    try {
+      await createTable({ name: name.trim(), capacity: cap });
+      onDone();
+    } catch (err) {
+      setError(errMsg(err, "Could not add the table"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title="Add table" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-3">
+        <Field label="Name"><input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. Table 1, Patio 3" /></Field>
+        <Field label="Seats (optional)"><input className={inputClass} inputMode="numeric" value={seats} onChange={(e) => setSeats(e.target.value)} placeholder="4" /></Field>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className={ghostBtn}>Cancel</button>
+          <button disabled={busy} className={primaryBtn}>{busy ? "Saving…" : "Add"}</button>
+        </div>
+      </form>
+    </Modal>
   );
 }

@@ -26,13 +26,18 @@ export interface CashierFigures {
   totals: MethodTotals;
 }
 
+export type Denominations = Record<string, number>;
+
 export interface BusinessDayInfo {
   id: string;
+  number: number;
   status: "OPEN" | "CLOSED";
   openedAt: string;
   openedBy: string;
   openingFloat: number;
   openNotes: string | null;
+  openDenominations: Denominations | null;
+  closeDenominations: Denominations | null;
   closedAt: string | null;
   closedBy: string | null;
   closeNotes: string | null;

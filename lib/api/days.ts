@@ -5,17 +5,19 @@ import type {
   CountedMethod,
   CurrentDayResponse,
   DayDetailResponse,
+  Denominations,
 } from "@/lib/dayTypes";
 
 export const getCurrentDay = () => apiFetch<CurrentDayResponse>("/days/current");
 
-export const openDay = (body: { openingFloat: number; notes?: string }) =>
+export const openDay = (body: { openingFloat: number; notes?: string; denominations?: Denominations }) =>
   apiFetch<{ day: BusinessDayInfo }>("/days/open", { method: "POST", body });
 
 export const closeDay = (body: {
   counts: { method: CountedMethod; counted: number }[];
   notes?: string;
   acceptVariance: boolean;
+  denominations?: Denominations;
 }) => apiFetch<CloseDayResponse>("/days/close", { method: "POST", body });
 
 export const listDays = () => apiFetch<{ days: BusinessDayInfo[] }>("/days?limit=30");

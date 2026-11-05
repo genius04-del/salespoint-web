@@ -15,6 +15,7 @@ export interface CreateIngredientInput {
   name: string;
   unit: string;
   isPrepared: boolean;
+  category?: string;
   minStockLevel: number;
   costPerUnit: number;
   openingQuantity: number;
@@ -24,11 +25,12 @@ export const createIngredient = (input: CreateIngredientInput) =>
 
 export const updateIngredient = (
   id: string,
-  input: Partial<{ name: string; unit: string; minStockLevel: number; costPerUnit: number; isActive: boolean }>
+  input: Partial<{ name: string; unit: string; category: string | null; minStockLevel: number; costPerUnit: number; isActive: boolean }>
 ) => apiFetch<{ ingredient: Ingredient }>(`/ingredients/${id}`, { method: "PATCH", body: input });
 
-export const setPrepMakeup = (id: string, components: { ingredientId: string; quantity: number }[]) =>
-  apiFetch<{ components: PrepComponentRow[] }>(`/ingredients/${id}/prep`, { method: "PUT", body: { components } });
+// Quantities are for the WHOLE standard batch, which makes `batchYield` of the item.
+export const setPrepMakeup = (id: string, components: { ingredientId: string; quantity: number }[], batchYield?: number) =>
+  apiFetch<{ components: PrepComponentRow[] }>(`/ingredients/${id}/prep`, { method: "PUT", body: { components, batchYield } });
 
 export type PaidWith = "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "ON_CREDIT";
 export const receiveIngredient = (
@@ -59,6 +61,7 @@ export interface ProductionRunInput {
   quantity: number;
   lines?: { ingredientId: string; quantityUsed: number }[];
   notes?: string;
+  reason?: string;
   allowShortage?: boolean;
 }
 export const recordProduction = (input: ProductionRunInput) =>

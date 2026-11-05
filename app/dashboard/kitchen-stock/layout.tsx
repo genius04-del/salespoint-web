@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { label: "Stock Journal", href: "/dashboard/kitchen-stock/production" },
   { label: "Ingredients", href: "/dashboard/kitchen-stock/ingredients" },
-  { label: "Recipes", href: "/dashboard/kitchen-stock/recipes" },
 ];
 
 export default function KitchenStockLayout({ children }: { children: React.ReactNode }) {
@@ -14,7 +13,7 @@ export default function KitchenStockLayout({ children }: { children: React.React
   return (
     <div>
       <h1 className="text-2xl font-bold text-[#071A2F]">Kitchen Stock</h1>
-      <p className="mb-4 text-sm text-gray-500">Ingredients, what each dish uses, and what the kitchen prepares.</p>
+      <p className="mb-4 text-sm text-gray-500">What the kitchen produces, and what it has in stock.</p>
       <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200">
         {TABS.map((t) => {
           const active = pathname.startsWith(t.href);

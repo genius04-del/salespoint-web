@@ -31,7 +31,7 @@ export function DayDetailModal({ dayId, onClose }: { dayId: string; onClose: () 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 print:bg-white">
       <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-lg">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 print:hidden">
-          <h2 className="font-semibold text-[#071A2F]">Day report</h2>
+          <h2 className="font-semibold text-[#071A2F]">{data ? `Finance posting FP-${String(data.day.number).padStart(4, "0")}` : "Finance posting"}</h2>
           <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100">
             <X size={18} />
           </button>
@@ -83,6 +83,16 @@ export function DayDetailModal({ dayId, onClose }: { dayId: string; onClose: () 
                 </table>
               ) : (
                 <p className="text-sm text-amber-700">This day has not been closed yet.</p>
+              )}
+
+              {data.day.closeDenominations && (
+                <p className="text-sm text-gray-600">
+                  Cash counted:{" "}
+                  {Object.entries(data.day.closeDenominations)
+                    .sort((a, b) => Number(b[0]) - Number(a[0]))
+                    .map(([face, n]) => `${n} × ${Number(face) >= 1 ? `GH₵${face}` : `${Math.round(Number(face) * 100)}p`}`)
+                    .join(", ")}
+                </p>
               )}
 
               {data.day.closeNotes && (

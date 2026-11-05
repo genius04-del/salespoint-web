@@ -8,9 +8,11 @@ interface ReceiptModalProps {
   business: Business | null;
   warning?: string | null;
   onNewSale: () => void;
+  title?: string; // heading above the receipt; defaults to "Sale completed"
+  actionLabel?: string; // label of the main button; defaults to "New Sale"
 }
 
-export function ReceiptModal({ sale, business, warning, onNewSale }: ReceiptModalProps) {
+export function ReceiptModal({ sale, business, warning, onNewSale, title = "Sale completed", actionLabel = "New Sale" }: ReceiptModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 print:bg-white print:px-0">
       <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white shadow-lg print:max-h-none print:shadow-none">
@@ -18,7 +20,7 @@ export function ReceiptModal({ sale, business, warning, onNewSale }: ReceiptModa
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10 text-success">
             <CircleCheck size={28} />
           </span>
-          <p className="font-semibold text-primary-navy">Sale completed</p>
+          <p className="font-semibold text-primary-navy">{title}</p>
         </div>
 
         {warning && (
@@ -101,7 +103,7 @@ export function ReceiptModal({ sale, business, warning, onNewSale }: ReceiptModa
             onClick={onNewSale}
             className="flex-1 rounded-lg bg-brand-orange px-4 py-2.5 font-semibold text-white hover:bg-light-orange"
           >
-            New Sale
+            {actionLabel}
           </button>
         </div>
       </div>

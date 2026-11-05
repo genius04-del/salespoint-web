@@ -21,6 +21,8 @@ import {
   Scale,
   Hash,
   KeyRound,
+  BookOpen,
+  HandCoins,
 } from "lucide-react";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -56,4 +58,6 @@ export const NAV_ITEMS: NavItem[] = [
 { title: "Stock Variance", icon: Scale, permission: "stock.view", href: "/dashboard/stock-variance" },
 { title: "My Shift", icon: Hash, permission: "shift.use", href: "/dashboard/shift" },
 { title: "Till Access", icon: KeyRound, permission: "staff.manage", href: "/dashboard/till-access" },
+{ title: "Recipes", icon: BookOpen, permission: "stock.view", href: "/dashboard/recipes" },
+{ title: "Finance Posting", icon: HandCoins, permission: "day.close", href: "/dashboard/finance-posting" },
 ];

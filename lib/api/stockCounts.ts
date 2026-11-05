@@ -1,5 +1,10 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { StockCountDetail, StockCountSummary, VarianceReport } from "@/lib/stockTypes";
+import type {
+  MovementReport,
+  StockCountDetail,
+  StockCountSummary,
+  VarianceReport,
+} from "@/lib/stockTypes";
 
 export const listStockCounts = () => apiFetch<{ counts: StockCountSummary[] }>("/stock-counts");
 
@@ -24,3 +29,9 @@ export const deleteStockCount = (id: string) => apiFetch<{ message: string }>(`/
 
 export const getVarianceReport = (range: string) =>
   apiFetch<VarianceReport>(`/stock-variance?range=${encodeURIComponent(range)}`);
+
+export const getVarianceReportBetween = (from: string, to: string) =>
+  apiFetch<VarianceReport>(`/stock-variance?range=custom&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+
+export const getMovementReport = (from: string, to: string) =>
+  apiFetch<MovementReport>(`/stock-variance/report?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);

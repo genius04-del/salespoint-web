@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sunrise } from "lucide-react";
 import { openDay } from "@/lib/api/days";
 import { money } from "./format";
+import { DenominationCounter, denomAny, denomTotal, toDenominations, type DenomEntry } from "./DenominationCounter";
 
 export function OpenDayForm({
   suggestedFloat,
@@ -16,6 +17,9 @@ export function OpenDayForm({
 }) {
   const [float, setFloat] = useState(String(suggestedFloat || ""));
   const [notes, setNotes] = useState("");
+  const [counting, setCounting] = useState(false);
+  const [denoms, setDenoms] = useState<DenomEntry>({});
+  const counted = counting && denomAny(denoms);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,7 +28,11 @@ export function OpenDayForm({
     setBusy(true);
     setError("");
     try {
-      await openDay({ openingFloat: Number(float || 0), notes: notes.trim() || undefined });
+      await openDay({
+        openingFloat: counted ? denomTotal(denoms) : Number(float || 0),
+        notes: notes.trim() || undefined,
+        denominations: counted ? toDenominations(denoms) : undefined,
+      });
       onOpened();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not open the day");
@@ -57,10 +65,15 @@ export function OpenDayForm({
           type="number"
           min="0"
           step="0.01"
-          value={float}
+          value={counted ? denomTotal(denoms) : float}
+          readOnly={counted}
           onChange={(e) => setFloat(e.target.value)}
           placeholder="0.00"
         />
+        <button type="button" onClick={() => setCounting((c) => !c)} className="mt-1 text-xs font-medium text-[#FF6B00] hover:underline">
+          {counting ? "Hide the count" : "Count notes and coins"}
+        </button>
+        {counting && <div className="mt-2"><DenominationCounter value={denoms} onChange={setDenoms} /></div>}
         {suggestedFloat > 0 && (
           <p className="mt-1 text-xs text-gray-500">
             Suggested from yesterday&apos;s closing count: {money(suggestedFloat)}

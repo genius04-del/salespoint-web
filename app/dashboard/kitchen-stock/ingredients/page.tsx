@@ -5,7 +5,8 @@ import { Plus, PackagePlus, Trash2, ListChecks } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { listIngredients } from "@/lib/api/kitchenStock";
 import type { Ingredient } from "@/lib/stockTypes";
-import { AddIngredientModal, MakeupModal, ReceiveModal, WasteModal } from "@/components/kitchen/IngredientModals";
+import { AddIngredientModal, ReceiveModal, WasteModal } from "@/components/kitchen/IngredientModals";
+import { BatchRecipeModal } from "@/components/kitchen/BatchRecipeModal";
 import { primaryBtn } from "@/components/kitchen/Modal";
 import { cedi, errMsg, qty } from "@/components/kitchen/format";
 
@@ -92,6 +93,7 @@ export default function IngredientsPage() {
                       {i.isPrepared && (
                         <span className="ml-2 rounded-full bg-[#FF6B00]/10 px-2 py-0.5 text-xs font-medium text-[#FF6B00]">made in kitchen</span>
                       )}
+                      {i.category && <span className="block text-xs text-gray-400">{i.category}</span>}
                     </td>
                     <td className={`px-4 py-3 text-right font-medium ${negative ? "text-red-600" : low ? "text-amber-600" : "text-[#071A2F]"}`}>
                       {qty(i.currentQuantity)} {i.unit}
@@ -103,7 +105,7 @@ export default function IngredientsPage() {
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         {canManage && i.isPrepared && (
-                          <button title="Make-up" onClick={() => setDialog({ kind: "makeup", ingredient: i })} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                          <button title="Recipe" onClick={() => setDialog({ kind: "makeup", ingredient: i })} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
                             <ListChecks size={16} />
                           </button>
                         )}
@@ -130,7 +132,7 @@ export default function IngredientsPage() {
       {dialog?.kind === "add" && <AddIngredientModal onClose={() => setDialog(null)} onDone={done} />}
       {dialog?.kind === "receive" && <ReceiveModal ingredient={dialog.ingredient} onClose={() => setDialog(null)} onDone={done} />}
       {dialog?.kind === "waste" && <WasteModal ingredient={dialog.ingredient} onClose={() => setDialog(null)} onDone={done} />}
-      {dialog?.kind === "makeup" && <MakeupModal ingredient={dialog.ingredient} all={items} onClose={() => setDialog(null)} onDone={done} />}
+      {dialog?.kind === "makeup" && <BatchRecipeModal recipe={dialog.ingredient} all={items} onClose={() => setDialog(null)} onDone={done} />}
     </div>
   );
 }
