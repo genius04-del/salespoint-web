@@ -6,6 +6,7 @@ import { Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useComingSoon } from "@/components/ComingSoonProvider";
 import { NAV_ITEMS } from "@/lib/navItems";
+import { BranchSwitcher } from "@/components/BranchSwitcher";
 
 /**
  * Shared between the fixed desktop sidebar and the mobile slide-in drawer
@@ -32,6 +33,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <p className="text-[11px] text-white/50">Simple. Fast. Powerful.</p>
         </div>
       </div>
+
+      <BranchSwitcher onNavigate={onNavigate} />
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         {visibleItems.map((item) => {

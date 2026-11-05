@@ -7,6 +7,7 @@ const TABS = [
   { label: "Business", href: "/dashboard/settings/business" },
   { label: "Password", href: "/dashboard/settings/password" },
   { label: "Paystack", href: "/dashboard/settings/paystack" },
+  { label: "Branches", href: "/dashboard/settings/branches" },
   { label: "Restaurant Mode", href: "/dashboard/settings/restaurant" },
 ];
 
