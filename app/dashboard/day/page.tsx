@@ -8,6 +8,7 @@ import { getCurrentDay, setRequireOpenDay } from "@/lib/api/days";
 import { METHOD_LABELS } from "@/lib/dayTypes";
 import type { CurrentDayResponse, MethodTotals } from "@/lib/dayTypes";
 import { OpenDayForm } from "@/components/day/OpenDayForm";
+import { EndOfDaySteps } from "@/components/day/EndOfDaySteps";
 import { dateTime, money, varianceLabel } from "@/components/day/format";
 
 const METHOD_ORDER = ["CASH", "MOBILE_MONEY", "BANK_TRANSFER", "OTHER", "PAYSTACK"] as const;
@@ -73,7 +74,7 @@ export default function DayEndPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#071A2F]">Day End</h1>
-          <p className="text-sm text-gray-500">Open the day with a counted float. Closing and counting the money is done in Finance Posting.</p>
+          <p className="text-sm text-gray-500">Open the day with a counted float. Count the money in Finance Posting, then finish the end-of-day steps here.</p>
         </div>
         <button onClick={reload} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#071A2F] hover:bg-gray-50">
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
@@ -141,12 +142,14 @@ export default function DayEndPage() {
             </section>
           )}
 
-          {canClose && (
+          {canClose && day.posted && <EndOfDaySteps current={current} onClosed={reload} />}
+
+          {canClose && !day.posted && (
             <Link href="/dashboard/finance-posting" className="flex items-center justify-between gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 hover:ring-[#FF6B00]/40">
               <div>
-                <p className="font-semibold text-[#071A2F]">Ready to close?</p>
+                <p className="font-semibold text-[#071A2F]">Ready to cash up?</p>
                 <p className="text-sm text-gray-500">
-                  Go to Finance Posting to count the money and close the day.
+                  Start with Finance Posting: count the money so the cashiers can go. Then the stock steps, then close the day here.
                   {(current.openTabs ?? 0) > 0 && ` ${current.openTabs} table tab${current.openTabs === 1 ? " is" : "s are"} still open and must be paid or cancelled first.`}
                 </p>
               </div>

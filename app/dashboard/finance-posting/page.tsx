@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { RefreshCw, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -64,7 +65,7 @@ export default function FinancePostingPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#071A2F]">Finance Posting</h1>
-          <p className="text-sm text-gray-500">Check the day&apos;s sales, count the money, then save to close the day.</p>
+          <p className="text-sm text-gray-500">Check the day&apos;s sales and count the money. Save it so the cashiers can go. The manager closes the day later, on Day End.</p>
         </div>
         <button onClick={reload} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#071A2F] hover:bg-gray-50">
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
@@ -89,10 +90,28 @@ export default function FinancePostingPage() {
       )}
 
       {!closed && current && day && !canClose && (
-        <p className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm ring-1 ring-black/5">Only a manager can post and close the day.</p>
+        <p className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm ring-1 ring-black/5">Only a manager can do the finance posting.</p>
       )}
 
-      {!closed && current && day && canClose && current.expected && (
+      {!closed && current && day && canClose && day.posted && (
+        <section className="space-y-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+          <p className="font-semibold text-[#071A2F]">Finance posting {voucherNo(day.number)} is saved</p>
+          <p className="text-sm text-gray-500">Saved by {day.postedBy}{day.postedAt ? ` · ${dateTime(day.postedAt)}` : ""}. The cashiers can go. No more sales can be added to this day.</p>
+          {current.posting && (
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-gray-100 text-xs uppercase text-gray-500"><tr><th className="py-2">Method</th><th className="py-2 text-right">Expected</th><th className="py-2 text-right">Counted</th><th className="py-2 text-right">Result</th></tr></thead>
+              <tbody className="divide-y divide-gray-50">
+                {current.posting.map((r) => (
+                  <tr key={r.method}><td className="py-2.5">{METHOD_LABELS[r.method]}</td><td className="py-2.5 text-right">{money(r.expected)}</td><td className="py-2.5 text-right">{money(r.counted)}</td><td className="py-2.5 text-right"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${varianceTone(r.variance)}`}>{varianceLabel(r.variance)}</span></td></tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <Link href="/dashboard/day" className="inline-block rounded-lg bg-[#FF6B00] px-4 py-2 text-sm font-semibold text-white">Continue the end-of-day steps</Link>
+        </section>
+      )}
+
+      {!closed && current && day && canClose && !day.posted && current.expected && (
         <>
           {/* The voucher */}
           <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
@@ -152,7 +171,7 @@ export default function FinancePostingPage() {
                     <tr key={d.id} onClick={() => setDetailId(d.id)} className="cursor-pointer hover:bg-gray-50">
                       <td className="py-2.5 font-medium text-[#071A2F]">{voucherNo(d.number)}</td>
                       <td className="py-2.5">{dateTime(d.openedAt)}</td>
-                      <td className="py-2.5 text-gray-600">{d.status === "OPEN" ? <span className="text-green-700">open now</span> : d.closedBy}</td>
+                      <td className="py-2.5 text-gray-600">{d.status === "OPEN" ? <span className="text-green-700">{d.posted ? "posted, day still open" : "open now"}</span> : d.postedBy ?? d.closedBy}</td>
                       <td className="py-2.5 text-right">{d.totalExpected === null ? "—" : money(d.totalExpected)}</td>
                       <td className="py-2.5 text-right">{d.totalCounted === null ? "—" : money(d.totalCounted)}</td>
                       <td className="py-2.5 text-right">

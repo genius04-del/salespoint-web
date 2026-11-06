@@ -54,7 +54,7 @@ export default function PosPage() {
   const [paystackSession, setPaystackSession] = useState<{
     reference: string;
     authorizationUrl: string;
-    amount: string;
+    amount: number;
   } | null>(null);
 
   const loadProducts = useCallback(async () => {
@@ -90,16 +90,19 @@ export default function PosPage() {
     return () => clearTimeout(timer);
   }, [loadProducts]);
 
+  // Restaurants that deduct stock at day end sell freely: no stock limits on the till.
+  const unlimited = !!(business as (Business & { deductStockAtDayEnd?: boolean }) | null)?.deductStockAtDayEnd;
+
   function addToCart(product: Product) {
     setCart((current) => {
       const existing = current.find((l) => l.productId === product.id);
       if (existing) {
-        if (existing.quantity >= product.currentQuantity) return current; // can't exceed stock
+        if (!unlimited && existing.quantity >= product.currentQuantity) return current; // can't exceed stock
         return current.map((l) =>
           l.productId === product.id ? { ...l, quantity: l.quantity + 1 } : l
         );
       }
-      if (product.currentQuantity < 1) return current;
+      if (!unlimited && product.currentQuantity < 1) return current;
       return [
         ...current,
         {
@@ -108,7 +111,7 @@ export default function PosPage() {
           unit: product.unit,
           unitPrice: Number(product.sellingPrice),
           quantity: 1,
-          maxStock: product.currentQuantity,
+          maxStock: unlimited ? Number.MAX_SAFE_INTEGER : product.currentQuantity,
         },
       ];
     });
@@ -249,7 +252,7 @@ export default function PosPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => {
-              const outOfStock = product.currentQuantity < 1;
+              const outOfStock = !unlimited && product.currentQuantity < 1;
               return (
                 <button
                   key={product.id}
@@ -264,7 +267,7 @@ export default function PosPage() {
                     GHS {Number(product.sellingPrice).toFixed(2)}
                   </span>
                   <span className="mt-1 text-xs text-gray-400">
-                    {outOfStock ? "Out of stock" : `${product.currentQuantity} ${product.unit} left`}
+                    {unlimited ? product.unit : outOfStock ? "Out of stock" : `${product.currentQuantity} ${product.unit} left`}
                   </span>
                 </button>
               );

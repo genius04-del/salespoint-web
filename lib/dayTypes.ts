@@ -31,6 +31,9 @@ export type Denominations = Record<string, number>;
 export interface BusinessDayInfo {
   id: string;
   number: number;
+  posted: boolean;
+  postedAt: string | null;
+  postedBy: string | null;
   status: "OPEN" | "CLOSED";
   openedAt: string;
   openedBy: string;
@@ -49,6 +52,10 @@ export interface BusinessDayInfo {
 export interface CurrentDayResponse {
   day: BusinessDayInfo | null;
   requireOpenDay: boolean;
+  // restaurants that deduct sales from stock at day end: steps still to do before closing
+  stockSteps?: { dayEnd: boolean; sales: number; pendingNumber: number | null; counted: boolean } | null;
+  // the saved finance posting, once it exists
+  posting?: { method: CountedMethod; expected: number; counted: number; variance: number }[] | null;
   // when no day is open
   suggestedFloat?: number;
   lastClosed?: { id: string; closedAt: string | null; totalVariance: number | null } | null;

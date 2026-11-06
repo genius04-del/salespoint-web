@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Printer, CheckCircle2, TriangleAlert } from "lucide-react";
 import { ApiError } from "@/lib/apiClient";
-import { closeDay } from "@/lib/api/days";
+import { postDay } from "@/lib/api/days";
 import { METHOD_LABELS } from "@/lib/dayTypes";
 import type { CloseDayResponse, CountedMethod, ExpectedRow } from "@/lib/dayTypes";
 import { DenominationCounter, denomAny, denomTotal, toDenominations, type DenomEntry } from "./DenominationCounter";
@@ -68,7 +68,7 @@ export function CashUpForm({
     setBusy(true);
     setError("");
     try {
-      const result = await closeDay({
+      const result = await postDay({
         counts: lines
           .filter((l) => l.entered)
           .map((l) => ({ method: l.method as CountedMethod, counted: l.value as number })),
@@ -78,7 +78,7 @@ export function CashUpForm({
       });
       onClosed(result);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Could not close the day";
+      const message = e instanceof Error ? e.message : "Could not save the finance posting";
       setError(message);
       // 409 = the system's figures changed while you were counting (e.g. a sale
       // came in). Reload them so the comparison is against the real numbers.
@@ -94,7 +94,7 @@ export function CashUpForm({
   return (
     <div className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
       <div>
-        <h2 className="font-semibold text-[#071A2F]">Cash-up: count and compare</h2>
+        <h2 className="font-semibold text-[#071A2F]">Count the money and compare</h2>
         <p className="text-sm text-gray-500">
           Count what is physically there for each method and type it in. The system compares it with what it expects.
         </p>
@@ -196,7 +196,7 @@ export function CashUpForm({
             <TriangleAlert size={16} /> The count does not match.
           </p>
           <p className="text-xs text-amber-800">
-            If you close anyway, each difference is posted to the books as <b>Cash Over/Short</b> so the ledger matches
+            If you save anyway, each difference is posted to the books as <b>Cash Over/Short</b> so the ledger matches
             what is really there. Please give a reason.
           </p>
           <textarea
@@ -225,7 +225,7 @@ export function CashUpForm({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           maxLength={1000}
-          placeholder="Closing note (optional)"
+          placeholder="Note (optional)"
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#FF6B00]"
         />
       )}
@@ -236,7 +236,7 @@ export function CashUpForm({
           disabled={!canSubmit}
           className="flex-1 rounded-lg bg-[#071A2F] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
         >
-          {busy ? "Closing…" : hasDifference ? "Close day with differences" : "Close day"}
+          {busy ? "Saving…" : hasDifference ? "Save finance posting with differences" : "Save finance posting"}
         </button>
         <button onClick={onCancel} disabled={busy} className="rounded-lg px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100">
           Back
@@ -260,10 +260,10 @@ export function ClosedSummary({ result, onDone }: { result: CloseDayResponse; on
         </span>
         <div>
           <h2 className="font-semibold text-[#071A2F]">
-            {result.balanced ? "Day closed. Everything balanced." : "Day closed with differences."}
+            {result.balanced ? "Finance posting saved. Everything balanced." : "Finance posting saved with differences."}
           </h2>
           <p className="text-sm text-gray-500">
-            {result.orders} sale{result.orders === 1 ? "" : "s"} · closed by {result.day.closedBy}
+            {result.orders} sale{result.orders === 1 ? "" : "s"} · saved by {result.day.postedBy}. The cashiers can go. No more sales can be added to this day.
           </p>
         </div>
       </div>

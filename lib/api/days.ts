@@ -13,12 +13,16 @@ export const getCurrentDay = () => apiFetch<CurrentDayResponse>("/days/current")
 export const openDay = (body: { openingFloat: number; notes?: string; denominations?: Denominations }) =>
   apiFetch<{ day: BusinessDayInfo }>("/days/open", { method: "POST", body });
 
-export const closeDay = (body: {
+// The finance posting: count the money, post differences. The day stays open.
+export const postDay = (body: {
   counts: { method: CountedMethod; counted: number }[];
   notes?: string;
   acceptVariance: boolean;
   denominations?: Denominations;
-}) => apiFetch<CloseDayResponse>("/days/close", { method: "POST", body });
+}) => apiFetch<CloseDayResponse>("/days/post", { method: "POST", body });
+
+// Closing the day, last of all.
+export const closeDay = (notes?: string) => apiFetch<{ day: BusinessDayInfo }>("/days/close", { method: "POST", body: { notes } });
 
 export const listDays = () => apiFetch<{ days: BusinessDayInfo[] }>("/days?limit=30");
 

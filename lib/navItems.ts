@@ -23,6 +23,7 @@ import {
   KeyRound,
   BookOpen,
   HandCoins,
+  PackageCheck,
 } from "lucide-react";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -60,4 +61,6 @@ export const NAV_ITEMS: NavItem[] = [
 { title: "Till Access", icon: KeyRound, permission: "staff.manage", href: "/dashboard/till-access" },
 { title: "Recipes", icon: BookOpen, permission: "stock.view", href: "/dashboard/recipes" },
 { title: "Finance Posting", icon: HandCoins, permission: "day.close", href: "/dashboard/finance-posting" },
+{ title: "Deduct Sales", icon: Scale, permission: "stock.manage", href: "/dashboard/stock-deduction" },
+{ title: "Stock Adjustment", icon: PackageCheck, permission: "stock.manage", href: "/dashboard/stock-adjustment" },
 ];
