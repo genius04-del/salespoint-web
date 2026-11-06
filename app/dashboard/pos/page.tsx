@@ -193,7 +193,7 @@ export default function PosPage() {
       setPaystackSession({
         reference: res.reference,
         authorizationUrl: res.authorizationUrl,
-        amount: res.amount,
+        amount: Number(res.amount),
       });
     } catch (err) {
       setCheckoutError(err instanceof ApiError ? err.message : "Could not start the Paystack payment.");
@@ -435,7 +435,7 @@ export default function PosPage() {
         <PaystackCheckoutModal
           reference={paystackSession.reference}
           authorizationUrl={paystackSession.authorizationUrl}
-          amount={paystackSession.amount}
+          amount={String(paystackSession.amount)}
           onSuccess={handlePaystackSuccess}
           onCancel={() => setPaystackSession(null)}
         />
