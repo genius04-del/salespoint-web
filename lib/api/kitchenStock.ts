@@ -18,6 +18,9 @@ export interface CreateIngredientInput {
   category?: string;
   minStockLevel: number;
   costPerUnit: number;
+  packName?: string;
+  packSize?: number;
+  packPrice?: number;
   openingQuantity: number;
 }
 export const createIngredient = (input: CreateIngredientInput) =>
@@ -25,7 +28,7 @@ export const createIngredient = (input: CreateIngredientInput) =>
 
 export const updateIngredient = (
   id: string,
-  input: Partial<{ name: string; unit: string; category: string | null; minStockLevel: number; costPerUnit: number; isActive: boolean }>
+  input: Partial<{ name: string; unit: string; category: string | null; minStockLevel: number; costPerUnit: number; packName: string | null; packSize: number | null; packPrice: number; isActive: boolean }>
 ) => apiFetch<{ ingredient: Ingredient }>(`/ingredients/${id}`, { method: "PATCH", body: input });
 
 // Quantities are for the WHOLE standard batch, which makes `batchYield` of the item.

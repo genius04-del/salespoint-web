@@ -17,6 +17,8 @@ export interface Ingredient {
   currentQuantity: string;
   minStockLevel: string;
   costPerUnit: string;
+  packName: string | null;
+  packSize: string | null;
   isActive: boolean;
   components: PrepComponentRow[];
 }

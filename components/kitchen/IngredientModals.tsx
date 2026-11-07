@@ -12,6 +12,22 @@ import { Field, Modal, ghostBtn, inputClass, primaryBtn } from "./Modal";
 import { errMsg, num, qty } from "./format";
 
 const UNITS = ["kg", "g", "litre", "ml", "piece", "pack", "tin", "crate"];
+const PACKS = ["Loose", "Bag", "Sack", "Sachet", "Tin", "Carton", "Bottle", "Box", "Crate", "Pack"];
+
+// Pack sizes can be typed in a smaller unit (500 g for a kg item); we convert.
+function sizeUnits(unit: string): string[] {
+  if (unit === "kg") return ["kg", "g"];
+  if (unit === "g") return ["g", "kg"];
+  if (unit === "litre") return ["litre", "ml"];
+  if (unit === "ml") return ["ml", "litre"];
+  return [unit];
+}
+function toUnit(value: number, from: string, to: string): number {
+  if (from === to) return value;
+  if ((from === "g" && to === "kg") || (from === "ml" && to === "litre")) return value / 1000;
+  if ((from === "kg" && to === "g") || (from === "litre" && to === "ml")) return value * 1000;
+  return value;
+}
 const CATEGORIES = ["Vegetables", "Meat", "Dry goods", "Dairy", "Sauces", "Drinks", "Packaging"];
 
 export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
@@ -21,6 +37,10 @@ export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; o
   const [category, setCategory] = useState("");
   const [opening, setOpening] = useState("");
   const [cost, setCost] = useState("");
+  const [packName, setPackName] = useState("Loose");
+  const [packSize, setPackSize] = useState("");
+  const [sizeUnit, setSizeUnit] = useState("");
+  const [packPrice, setPackPrice] = useState("");
   const [min, setMin] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -28,13 +48,18 @@ export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; o
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const loose = packName === "Loose";
+    const sizeN = loose || packSize.trim() === "" ? undefined : toUnit(num(packSize), sizeUnit || unit, unit);
+    const priceN = loose || packPrice.trim() === "" ? undefined : num(packPrice);
+    if (!loose && ((sizeN === undefined) !== (priceN === undefined))) return setError("Fill in both the pack size and the price per pack, or leave both empty.");
+    if (sizeN !== undefined && !(sizeN > 0)) return setError("Pack size must be more than zero.");
     const costN = cost.trim() === "" ? 0 : num(cost);
     const openN = opening.trim() === "" ? 0 : num(opening);
     const minN = min.trim() === "" ? 0 : num(min);
-    if ([costN, openN, minN].some((n) => !Number.isFinite(n) || n < 0)) return setError("Numbers can't be negative or text.");
+    if ([costN, openN, minN, priceN ?? 0].some((n) => !Number.isFinite(n) || n < 0)) return setError("Numbers can't be negative or text.");
     setBusy(true);
     try {
-      await createIngredient({ name: name.trim(), unit, isPrepared, category: category.trim() || undefined, minStockLevel: minN, costPerUnit: costN, openingQuantity: openN });
+      await createIngredient({ name: name.trim(), unit, isPrepared, category: category.trim() || undefined, minStockLevel: minN, costPerUnit: costN, packName: sizeN ? packName : undefined, packSize: sizeN, packPrice: sizeN ? priceN : undefined, openingQuantity: openN });
       onDone();
     } catch (err) {
       setError(errMsg(err, "Could not save"));
@@ -51,7 +76,7 @@ export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; o
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Measured in">
-            <select className={inputClass} value={unit} onChange={(e) => setUnit(e.target.value)}>
+            <select className={inputClass} value={unit} onChange={(e) => { setUnit(e.target.value); setSizeUnit(""); }}>
               {UNITS.map((u) => (
                 <option key={u}>{u}</option>
               ))}
@@ -76,14 +101,56 @@ export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; o
           </span>
         </label>
         {!isPrepared && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="In stock now">
+          <>
+            <Field label="In stock now" hint={`How much you have on the shelf today, in ${unit}.`}>
               <input className={inputClass} inputMode="decimal" value={opening} onChange={(e) => setOpening(e.target.value)} placeholder="0" />
             </Field>
-            <Field label={`Cost per ${unit} (GH₵)`}>
-              <input className={inputClass} inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" />
-            </Field>
-          </div>
+            <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+              <p className="text-sm font-semibold text-[#071A2F]">How do you buy it?</p>
+              <Field label="Comes in a">
+                <select className={inputClass} value={packName} onChange={(e) => setPackName(e.target.value)}>
+                  {PACKS.map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
+                </select>
+              </Field>
+              {packName === "Loose" ? (
+                <Field label={`Cost per ${unit} (GH₵)`}>
+                  <input className={inputClass} inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" />
+                </Field>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label={`One ${packName.toLowerCase()} holds`}>
+                      <div className="flex gap-2">
+                        <input className={inputClass} inputMode="decimal" value={packSize} onChange={(e) => setPackSize(e.target.value)} placeholder="50" />
+                        {sizeUnits(unit).length > 1 && (
+                          <select className={inputClass + " max-w-[5.5rem]"} value={sizeUnit || unit} onChange={(e) => setSizeUnit(e.target.value)}>
+                            {sizeUnits(unit).map((u) => (
+                              <option key={u}>{u}</option>
+                            ))}
+                          </select>
+                        )}
+                        {sizeUnits(unit).length === 1 && <span className="self-center text-sm text-gray-500">{unit}</span>}
+                      </div>
+                    </Field>
+                    <Field label={`Price per ${packName.toLowerCase()} (GH₵)`}>
+                      <input className={inputClass} inputMode="decimal" value={packPrice} onChange={(e) => setPackPrice(e.target.value)} placeholder="650.00" />
+                    </Field>
+                  </div>
+                  {(() => {
+                    const size = toUnit(num(packSize), sizeUnit || unit, unit);
+                    const price = num(packPrice);
+                    return size > 0 && price >= 0 && packPrice.trim() !== "" ? (
+                      <p className="text-sm text-[#071A2F]">
+                        That works out at <b>GH₵ {(price / size).toFixed(2)} per {unit}</b>. We calculate it for you.
+                      </p>
+                    ) : null;
+                  })()}
+                </>
+              )}
+            </div>
+          </>
         )}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
@@ -96,6 +163,9 @@ export function AddIngredientModal({ onClose, onDone }: { onClose: () => void; o
 }
 
 export function ReceiveModal({ ingredient, onClose, onDone }: { ingredient: Ingredient; onClose: () => void; onDone: () => void }) {
+  const packSize = ingredient.packSize ? Number(ingredient.packSize) : 0;
+  const packLabel = (ingredient.packName || "pack").toLowerCase();
+  const [byPack, setByPack] = useState(packSize > 0);
   const [quantity, setQuantity] = useState("");
   const [total, setTotal] = useState("");
   const [paidWith, setPaidWith] = useState<PaidWith>("CASH");
@@ -106,7 +176,7 @@ export function ReceiveModal({ ingredient, onClose, onDone }: { ingredient: Ingr
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const q = num(quantity);
+    const q = byPack ? num(quantity) * packSize : num(quantity);
     const t = total.trim() === "" ? undefined : num(total);
     if (!(q > 0)) return setError("Enter how much came in.");
     if (t !== undefined && !(t >= 0)) return setError("The amount paid can't be negative.");
@@ -125,9 +195,21 @@ export function ReceiveModal({ ingredient, onClose, onDone }: { ingredient: Ingr
     <Modal title={`Receive ${ingredient.name}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
         <p className="text-sm text-gray-500">On hand now: {qty(ingredient.currentQuantity)} {ingredient.unit}</p>
-        <Field label={`Quantity received (${ingredient.unit})`}>
+        {packSize > 0 && (
+          <div className="flex gap-2 text-sm">
+            <button type="button" onClick={() => setByPack(true)} className={byPack ? primaryBtn : ghostBtn}>By {packLabel}</button>
+            <button type="button" onClick={() => setByPack(false)} className={!byPack ? primaryBtn : ghostBtn}>By {ingredient.unit}</button>
+          </div>
+        )}
+        <Field label={byPack ? `How many ${packLabel}s came in?` : `Quantity received (${ingredient.unit})`} hint={byPack ? `1 ${packLabel} = ${qty(String(packSize))} ${ingredient.unit}` : undefined}>
           <input className={inputClass} inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} autoFocus required />
         </Field>
+        {byPack && num(quantity) > 0 && (
+          <p className="text-sm text-[#071A2F]">
+            That is <b>{qty(String(num(quantity) * packSize))} {ingredient.unit}</b>
+            {total.trim() !== "" && num(total) > 0 && <> at <b>GH₵ {(num(total) / (num(quantity) * packSize)).toFixed(2)} per {ingredient.unit}</b></>}.
+          </p>
+        )}
         <Field label="Total paid (GH₵)" hint="Optional. Fills in the cost and records the purchase in Finance.">
           <input className={inputClass} inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" />
         </Field>
