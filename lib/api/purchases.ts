@@ -22,8 +22,9 @@ export function getPurchase(id: string) {
 
 export interface CreatePurchaseInput {
   supplierId: string;
-  items: { productId: string; quantity: number; costPrice: number }[];
+  items: { productId?: string; ingredientId?: string; quantity: number; costPrice: number; lineTotal?: number }[];
   amountPaid?: number;
+  paidWith?: "CASH" | "MOBILE_MONEY" | "BANK_TRANSFER";
   notes?: string;
 }
 

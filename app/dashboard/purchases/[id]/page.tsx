@@ -82,7 +82,7 @@ export default function PurchaseDetailPage({ params }: { params: Promise<{ id: s
               {purchase.items.map((item) => (
                 <li key={item.id} className="flex justify-between py-2.5 text-sm">
                   <span className="text-gray-700">
-                    {item.quantity} × {item.productName} @ GHS {Number(item.costPrice).toFixed(2)}
+                    {Number(item.quantity).toLocaleString("en-GH", { maximumFractionDigits: 3 })}{item.unit ? ` ${item.unit}` : " ×"} {item.unit ? "of " : ""}{item.productName} @ GHS {Number(item.costPrice).toFixed(2)}{item.unit ? ` per ${item.unit}` : ""}
                   </span>
                   <span className="font-medium text-gray-800">GHS {Number(item.lineTotal).toFixed(2)}</span>
                 </li>

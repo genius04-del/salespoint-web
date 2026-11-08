@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Ingredient } from "@/lib/stockTypes";
 import {
   createIngredient,
@@ -8,6 +8,9 @@ import {
   wasteIngredient,
   type PaidWith,
 } from "@/lib/api/kitchenStock";
+import { createPurchase } from "@/lib/api/purchases";
+import { listSuppliers } from "@/lib/api/suppliers";
+import type { SupplierWithBalance } from "@/lib/types";
 import { Field, Modal, ghostBtn, inputClass, primaryBtn } from "./Modal";
 import { errMsg, num, qty } from "./format";
 
@@ -166,6 +169,13 @@ export function ReceiveModal({ ingredient, onClose, onDone }: { ingredient: Ingr
   const packSize = ingredient.packSize ? Number(ingredient.packSize) : 0;
   const packLabel = (ingredient.packName || "pack").toLowerCase();
   const [byPack, setByPack] = useState(packSize > 0);
+  const [suppliers, setSuppliers] = useState<SupplierWithBalance[]>([]);
+  const [supplierId, setSupplierId] = useState("");
+  useEffect(() => {
+    listSuppliers()
+      .then((r) => setSuppliers(r.suppliers))
+      .catch(() => {});
+  }, []);
   const [quantity, setQuantity] = useState("");
   const [total, setTotal] = useState("");
   const [paidWith, setPaidWith] = useState<PaidWith>("CASH");
@@ -180,9 +190,21 @@ export function ReceiveModal({ ingredient, onClose, onDone }: { ingredient: Ingr
     const t = total.trim() === "" ? undefined : num(total);
     if (!(q > 0)) return setError("Enter how much came in.");
     if (t !== undefined && !(t >= 0)) return setError("The amount paid can't be negative.");
+    if (supplierId && t === undefined) return setError("Enter the total paid for this purchase (0 if it was free).");
     setBusy(true);
     try {
-      await receiveIngredient(ingredient.id, { quantity: q, totalCost: t, paidWith, note: note.trim() || undefined });
+      if (supplierId && t !== undefined) {
+        // From a supplier: record it as a Purchase so it shows under Purchases and in what you owe.
+        await createPurchase({
+          supplierId,
+          items: [{ ingredientId: ingredient.id, quantity: q, costPrice: t / q, lineTotal: t }],
+          amountPaid: paidWith === "ON_CREDIT" ? 0 : t,
+          paidWith: paidWith === "ON_CREDIT" ? undefined : paidWith,
+          notes: note.trim() || undefined,
+        });
+      } else {
+        await receiveIngredient(ingredient.id, { quantity: q, totalCost: t, paidWith, note: note.trim() || undefined });
+      }
       onDone();
     } catch (err) {
       setError(errMsg(err, "Could not save"));
@@ -223,8 +245,20 @@ export function ReceiveModal({ ingredient, onClose, onDone }: { ingredient: Ingr
             </select>
           </Field>
         )}
+        {suppliers.length > 0 && (
+          <Field label="Supplier" hint="Pick one to record this under Purchases. Leave empty for a quick market run.">
+            <select className={inputClass} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+              <option value="">No supplier</option>
+              {suppliers.map((sp) => (
+                <option key={sp.id} value={sp.id}>
+                  {sp.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Note">
-          <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Supplier, market, etc." />
+          <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Market, invoice number, etc." />
         </Field>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
