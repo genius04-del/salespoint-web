@@ -189,12 +189,10 @@ export type PurchasePaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
 export interface PurchaseItem {
   id: string;
   purchaseId: string;
-  productId: string | null;
-  ingredientId: string | null;
+  productId: string;
   productName: string;
-  unit: string | null;
   costPrice: string;
-  quantity: string | number; // decimal for ingredients; Number() before maths
+  quantity: number;
   lineTotal: string;
 }
 

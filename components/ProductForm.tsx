@@ -16,6 +16,7 @@ export interface ProductFormValues {
   sellingPrice: string;
   minStockLevel: string;
   openingStock: string;
+  kind: "dish" | "resold"; // restaurant mode only: dish = price-only menu item, resold = drink/water with its own stock
 }
 
 function emptyValues(): ProductFormValues {
@@ -30,6 +31,7 @@ function emptyValues(): ProductFormValues {
     sellingPrice: "",
     minStockLevel: "0",
     openingStock: "0",
+    kind: "dish",
   };
 }
 
@@ -45,6 +47,7 @@ function valuesFromProduct(product: Product): ProductFormValues {
     sellingPrice: product.sellingPrice,
     minStockLevel: String(product.minStockLevel),
     openingStock: "0", // not editable here — stock changes only via /inventory
+    kind: product.hasRecipe ? "dish" : "resold",
   };
 }
 
@@ -52,11 +55,12 @@ interface ProductFormProps {
   mode: "create" | "edit";
   categories: Category[];
   product?: Product; // required when mode === "edit"
+  restaurant?: boolean;
   onSubmit: (values: ProductFormValues) => Promise<void>;
   onCancel: () => void;
 }
 
-export function ProductForm({ mode, categories, product, onSubmit, onCancel }: ProductFormProps) {
+export function ProductForm({ mode, categories, product, restaurant = false, onSubmit, onCancel }: ProductFormProps) {
   const [values, setValues] = useState<ProductFormValues>(
     mode === "edit" && product ? valuesFromProduct(product) : emptyValues()
   );
@@ -86,6 +90,8 @@ export function ProductForm({ mode, categories, product, onSubmit, onCancel }: P
     }
   }
 
+  const isDish = restaurant && values.kind === "dish";
+
   const inputClass =
     "w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/30";
   const labelClass = "mb-1 block text-sm font-medium text-gray-700";
@@ -96,6 +102,30 @@ export function ProductForm({ mode, categories, product, onSubmit, onCancel }: P
         <div className="flex items-start gap-2 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
           <CircleAlert size={18} className="mt-0.5 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {restaurant && (
+        <div>
+          <label className={labelClass}>What is it?</label>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <button
+              type="button"
+              onClick={() => update("kind", "dish")}
+              className={`rounded-lg border px-3 py-2 text-left ${isDish ? "border-brand-orange bg-brand-orange/10 font-semibold" : "border-gray-300"}`}
+            >
+              Menu dish
+              <span className="block text-xs font-normal text-gray-500">Made from ingredients. Name and price only.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => update("kind", "resold")}
+              className={`rounded-lg border px-3 py-2 text-left ${!isDish ? "border-brand-orange bg-brand-orange/10 font-semibold" : "border-gray-300"}`}
+            >
+              Sold as it is
+              <span className="block text-xs font-normal text-gray-500">Drink or water. Has its own stock.</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -136,15 +166,17 @@ export function ProductForm({ mode, categories, product, onSubmit, onCancel }: P
             ))}
           </select>
         </div>
-        <div>
-          <label className={labelClass}>Unit</label>
-          <input
-            value={values.unit}
-            onChange={(e) => update("unit", e.target.value)}
-            className={inputClass}
-            placeholder="unit, kg, litre…"
-          />
-        </div>
+        {!isDish && (
+          <div>
+            <label className={labelClass}>Unit</label>
+            <input
+              value={values.unit}
+              onChange={(e) => update("unit", e.target.value)}
+              className={inputClass}
+              placeholder="unit, kg, litre…"
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -163,17 +195,19 @@ export function ProductForm({ mode, categories, product, onSubmit, onCancel }: P
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={labelClass}>Cost price (GHS)</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={values.costPrice}
-            onChange={(e) => update("costPrice", e.target.value)}
-            className={inputClass}
-          />
-        </div>
+        {!isDish && (
+          <div>
+            <label className={labelClass}>Cost price (GHS)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={values.costPrice}
+              onChange={(e) => update("costPrice", e.target.value)}
+              className={inputClass}
+            />
+          </div>
+        )}
         <div>
           <label className={labelClass}>Selling price (GHS)</label>
           <input
@@ -188,6 +222,12 @@ export function ProductForm({ mode, categories, product, onSubmit, onCancel }: P
         </div>
       </div>
 
+      {isDish ? (
+        <p className="rounded-lg bg-app-background px-3 py-2 text-xs text-gray-500">
+          A menu dish has no stock of its own. Add what goes into it on the <b>Recipes</b> page, and keep the ingredients in <b>Inventory</b>. Selling the dish then uses them up at day end.
+        </p>
+      ) : (
+        <>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={labelClass}>Minimum stock level</label>
@@ -216,6 +256,9 @@ export function ProductForm({ mode, categories, product, onSubmit, onCancel }: P
           </div>
         )}
       </div>
+
+        </>
+      )}
 
       {mode === "edit" && (
         <p className="rounded-lg bg-app-background px-3 py-2 text-xs text-gray-500">

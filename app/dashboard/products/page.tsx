@@ -6,6 +6,7 @@ import { Plus, Search, Tags, Pencil, Trash2, TriangleAlert, Package } from "luci
 import type { Category, Product } from "@/lib/types";
 import { listProducts, listCategories, deleteProduct } from "@/lib/api/products";
 import { ApiError } from "@/lib/apiClient";
+import { getBusiness } from "@/lib/api/business";
 import { CategoryManagerModal } from "@/components/CategoryManagerModal";
 
 export default function ProductsPage() {
@@ -17,6 +18,7 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [restaurant, setRestaurant] = useState(false);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -53,6 +55,17 @@ export default function ProductsPage() {
       await loadCategories();
     })();
   }, [loadCategories]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getBusiness();
+        setRestaurant(!!res.business.restaurantModeEnabled);
+      } catch {
+        // Non-fatal — shows the normal shop columns.
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     // Debounce search so every keystroke doesn't fire a request.
@@ -142,7 +155,7 @@ export default function ProductsPage() {
               <tr className="border-b border-gray-100 text-left text-xs uppercase tracking-wide text-gray-400">
                 <th className="px-4 py-3 font-medium">Product</th>
                 <th className="px-4 py-3 font-medium">Category</th>
-                <th className="px-4 py-3 font-medium text-right">Cost</th>
+                {!restaurant && <th className="px-4 py-3 font-medium text-right">Cost</th>}
                 <th className="px-4 py-3 font-medium text-right">Price</th>
                 <th className="px-4 py-3 font-medium text-right">Stock</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
@@ -163,21 +176,27 @@ export default function ProductsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{product.category?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-right text-gray-600">
-                      GHS {Number(product.costPrice).toFixed(2)}
-                    </td>
+                    {!restaurant && (
+                      <td className="px-4 py-3 text-right text-gray-600">
+                        GHS {Number(product.costPrice).toFixed(2)}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right font-medium text-primary-navy">
                       GHS {Number(product.sellingPrice).toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                          lowStock ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
-                        }`}
-                      >
-                        {lowStock && <TriangleAlert size={12} />}
-                        {product.currentQuantity} {product.unit}
-                      </span>
+                      {restaurant && product.hasRecipe ? (
+                        <span className="text-xs text-gray-400">From ingredients</span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                            lowStock ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
+                          }`}
+                        >
+                          {lowStock && <TriangleAlert size={12} />}
+                          {product.currentQuantity} {product.unit}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">

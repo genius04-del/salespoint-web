@@ -6,11 +6,13 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { Category } from "@/lib/types";
 import { listCategories, createProduct } from "@/lib/api/products";
+import { getBusiness } from "@/lib/api/business";
 import { ProductForm, type ProductFormValues } from "@/components/ProductForm";
 
 export default function NewProductPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [restaurant, setRestaurant] = useState(false);
 
   useEffect(() => {
     listCategories()
@@ -18,20 +20,26 @@ export default function NewProductPage() {
       .catch(() => {
         // Non-fatal — the form just offers no category options.
       });
+    getBusiness()
+      .then((res) => setRestaurant(!!res.business.restaurantModeEnabled))
+      .catch(() => {
+        // Non-fatal — the form falls back to the normal shop fields.
+      });
   }, []);
 
   async function handleSubmit(values: ProductFormValues) {
+    const dish = restaurant && values.kind === "dish";
     await createProduct({
       name: values.name.trim(),
       description: values.description.trim() || undefined,
       categoryId: values.categoryId || undefined,
       sku: values.sku.trim() || undefined,
       barcode: values.barcode.trim() || undefined,
-      unit: values.unit.trim() || "unit",
-      costPrice: Number(values.costPrice) || 0,
+      unit: dish ? "unit" : values.unit.trim() || "unit",
+      costPrice: dish ? 0 : Number(values.costPrice) || 0,
       sellingPrice: Number(values.sellingPrice),
-      minStockLevel: Number(values.minStockLevel) || 0,
-      openingStock: Number(values.openingStock) || 0,
+      minStockLevel: dish ? 0 : Number(values.minStockLevel) || 0,
+      openingStock: dish ? 0 : Number(values.openingStock) || 0,
     });
     router.push("/dashboard/products");
   }
@@ -49,6 +57,7 @@ export default function NewProductPage() {
         <h1 className="mb-5 text-lg font-bold text-primary-navy">Add Product</h1>
         <ProductForm
           mode="create"
+          restaurant={restaurant}
           categories={categories}
           onSubmit={handleSubmit}
           onCancel={() => router.push("/dashboard/products")}

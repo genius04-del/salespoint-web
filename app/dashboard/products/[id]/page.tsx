@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import type { Category, Product } from "@/lib/types";
 import { listCategories, getProduct, updateProduct } from "@/lib/api/products";
 import { ApiError } from "@/lib/apiClient";
+import { getBusiness } from "@/lib/api/business";
 import { ProductForm, type ProductFormValues } from "@/components/ProductForm";
 
 // Next.js 16: a Client Component page's dynamic segment arrives as a
@@ -18,6 +19,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
 
   const [product, setProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [restaurant, setRestaurant] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -33,17 +35,31 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    getBusiness()
+      .then((res) => setRestaurant(!!res.business.restaurantModeEnabled))
+      .catch(() => {
+        // Non-fatal — the form falls back to the normal shop fields.
+      });
+  }, []);
+
   async function handleSubmit(values: ProductFormValues) {
+    const dish = restaurant && values.kind === "dish";
     await updateProduct(id, {
       name: values.name.trim(),
       description: values.description.trim() || undefined,
       categoryId: values.categoryId || undefined,
       sku: values.sku.trim() || undefined,
       barcode: values.barcode.trim() || undefined,
-      unit: values.unit.trim() || "unit",
-      costPrice: Number(values.costPrice) || 0,
       sellingPrice: Number(values.sellingPrice),
-      minStockLevel: Number(values.minStockLevel) || 0,
+      // A dish's cost comes from its recipe, so never overwrite it from here.
+      ...(dish
+        ? {}
+        : {
+            unit: values.unit.trim() || "unit",
+            costPrice: Number(values.costPrice) || 0,
+            minStockLevel: Number(values.minStockLevel) || 0,
+          }),
     });
     router.push("/dashboard/products");
   }
@@ -70,6 +86,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             mode="edit"
             categories={categories}
             product={product}
+            restaurant={restaurant}
             onSubmit={handleSubmit}
             onCancel={() => router.push("/dashboard/products")}
           />
