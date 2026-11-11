@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Store, Delete, CircleAlert } from "lucide-react";
+import { HelpBot } from "@/components/HelpBot";
 
 const STORE_KEY = "sp_till_code";
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"] as const;
@@ -171,6 +172,7 @@ export default function TillLoginPage() {
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </div>
+         <HelpBot audience="cashier" />
 
         <p className="mt-4 text-center text-xs text-gray-500">
           Manager or owner? <a href="/login" className="font-semibold text-brand-orange">Sign in with your email</a>

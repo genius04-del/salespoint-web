@@ -6,6 +6,7 @@ import { Menu, X, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ComingSoonProvider } from "@/components/ComingSoonProvider";
 import { Sidebar } from "@/components/Sidebar";
+import { HelpBot } from "@/components/HelpBot";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { status, user, logout } = useAuth();
