@@ -182,6 +182,7 @@ export interface PurchaseItem {
 }
 
 export interface PurchasePayment {
+  
   id: string;
   businessId: string;
   purchaseId: string;
