@@ -82,6 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             SalesPoint by LoneWolf Digital Technology Solutions
           </footer>
         </div>
+        <HelpBot audience="cashier" />
       </div>
 
       {showLogoutConfirm && (
