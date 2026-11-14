@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getBusiness, updateBusiness } from "@/lib/api/business";
 import { errMsg } from "@/components/kitchen/format";
+import { resetBusinessMode } from "@/lib/businessMode";
 
 type Flags = { restaurantModeEnabled: boolean; deductStockAtDayEnd: boolean };
 
@@ -29,6 +30,7 @@ export default function RestaurantSettingsPage() {
     try {
       const res = (await updateBusiness({ [key]: !flags[key] } as never)).business as unknown as Flags;
       setFlags({ restaurantModeEnabled: !!res.restaurantModeEnabled, deductStockAtDayEnd: !!res.deductStockAtDayEnd });
+      resetBusinessMode(); // the sidebar and home tiles follow the new setting
     } catch (e) {
       setError(errMsg(e, "Could not change this. Only the owner can."));
     } finally {

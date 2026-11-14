@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useComingSoon } from "@/components/ComingSoonProvider";
 import { NAV_ITEMS } from "@/lib/navItems";
 import { BranchSwitcher } from "@/components/BranchSwitcher";
+import { useIsNavHidden } from "@/lib/businessMode";
 
 /**
  * Shared between the fixed desktop sidebar and the mobile slide-in drawer
@@ -17,9 +18,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { hasPermission } = useAuth();
   const showComingSoon = useComingSoon();
   const pathname = usePathname();
+  const isHidden = useIsNavHidden();
 
   const visibleItems = NAV_ITEMS.filter(
-    (item) => item.permission === null || hasPermission(item.permission)
+    (item) => !isHidden(item.title) && (item.permission === null || hasPermission(item.permission))
   );
 
   return (

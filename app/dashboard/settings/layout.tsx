@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useBusinessMode } from "@/lib/businessMode";
 
 const TABS = [
   { label: "Business", href: "/dashboard/settings/business" },
@@ -13,11 +14,14 @@ const TABS = [
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const mode = useBusinessMode();
+  // A provision store or other shop never sees anything about restaurant mode.
+  const tabs = TABS.filter((t) => t.label !== "Restaurant Mode" || mode.restaurantMode || mode.restaurantType);
   return (
     <div>
       <h1 className="mb-4 text-2xl font-bold text-primary-navy">Settings</h1>
       <nav className="mb-6 flex gap-1 overflow-x-auto border-b border-gray-200">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const active = pathname.startsWith(t.href);
           return (
             <Link

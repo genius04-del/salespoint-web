@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useComingSoon } from "@/components/ComingSoonProvider";
 import { NAV_ITEMS } from "@/lib/navItems";
 import { useRestaurantMode } from "@/lib/useRestaurantMode";
+ import { useIsNavHidden } from "@/lib/businessMode";
 
 // The "Dashboard" item itself isn't a tile on its own home screen.
 const HOME_TILES = NAV_ITEMS.filter((item) => item.title !== "Dashboard");
@@ -12,13 +13,15 @@ const HOME_TILES = NAV_ITEMS.filter((item) => item.title !== "Dashboard");
 export default function DashboardPage() {
   const { hasPermission } = useAuth();
   const showComingSoon = useComingSoon();
+   const isHidden = useIsNavHidden();
 
   const restaurantMode = useRestaurantMode();
 
   const visibleItems = HOME_TILES.filter(
     (item) =>
       (item.permission === null || hasPermission(item.permission)) &&
-      (!item.restaurantOnly || restaurantMode === true)
+      (!item.restaurantOnly || restaurantMode === true) &&
+      (!isHidden || !("hidden" in item && item.hidden))
   );
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
